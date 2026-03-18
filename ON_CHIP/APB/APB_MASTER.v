@@ -13,7 +13,7 @@ module apb_master
    // Outputs 
     output reg [WIDTH-1:0] data_out,
     output reg done,
-    output reg error
+    output reg error,
 
     // Slave signals
     input PREADY,
@@ -25,9 +25,7 @@ module apb_master
     output reg PENABLE,
     output reg PWRITE,
     output reg [ADDR-1:0] PADDR,
-    output reg [WIDTH-1:0] PWDATA,
-
-    
+    output reg [WIDTH-1:0] PWDATA   
 );
 
     
@@ -67,42 +65,59 @@ module apb_master
 
     //output logic
     always @(posedge PCLK or negedge PRESETn) begin
-        if (!PRESETn) begin
-            PSEL     <= 0;PENABLE  <= 0; PWRITE   <= 0;
-            PADDR    <= 0; PWDATA   <= 0;
-             
-           data_out <= 0; done<= 0; error<= 0;
-        end
-        else begin
-            case (state)
-                IDLE: begin
-                    PSEL    <= 0;
-                    PENABLE <= 0;
-                    done    <= 0;
-                    error   <= 0;
-                    end
-               SETUP: begin
-                    PSEL    <= 1;
-                    PENABLE <= 0;
-                    PWRITE  <= write;
-                    PADDR   <= addr_in;
-                    PWDATA  <= data_in;
-                    done    <= 0;
-                    end
-             ACCESS: begin
-                    PSEL    <= 1;
-                    PENABLE <= 1;
+    if (!PRESETn) begin
+        PSEL     <= 0;
+        PENABLE  <= 0;
+        PWRITE   <= 0;
+        PADDR    <= 0;
+        PWDATA   <= 0;
 
-                       if (PREADY) begin
-                             done <= 1;
-                                  if (!PWRITE)
-                                 data_out <= PRDATA;
-                            error <= PSLVERR;  end
-                             
-                       else begin done  <= 0; error <= 0; end
-                    end //access state end
+        data_out <= 0;
+        done     <= 0;
+        error    <= 0;
+    end
+    else begin
+        case (state)
+            IDLE: begin
+                PSEL    <= 0;
+                PENABLE <= 0;
+                PWRITE  <= 0;
+                done    <= 0;
+                error   <= 0;
+            end
 
-            endcase
+            SETUP: begin
+                PSEL    <= 1;
+                PENABLE <= 0;
+                PWRITE  <= write;
+                PADDR   <= addr_in;
+                PWDATA  <= (write) ? data_in : 0;
+                done    <= 0;
+            end
+
+            ACCESS: begin
+                PSEL    <= 1;
+                PENABLE <= 1;
+                if (PREADY) begin
+                    done <= 1;
+                    error <= PSLVERR;
+                    if (!PWRITE)
+                        data_out <= PRDATA;
+                end else begin
+                    done  <= 0;
+                    error <= 0;
+                end
+            end
+
+            default: begin
+                PSEL    <= 0;
+                PENABLE <= 0;
+                PWRITE  <= 0;
+                done    <= 0;
+                error   <= 0;
+            end
+        endcase
+  
         end//else end
     end //output logic always end
 endmodule
